@@ -13,8 +13,29 @@ export default function ProfileCreatePage() {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
   const [currentStep, setCurrentStep] = useState(0)
-  const { register, handleSubmit, watch, formState: { errors, isValid } } = useForm({ mode: 'onChange' })
+  const { register, handleSubmit, watch, trigger, formState: { errors, isValid } } = useForm({ mode: 'onChange' })
 
+  const onNextStep = async () => {
+    const stepFields = [
+      ['startup_name', 'incorporation_date', 'entity_type', 'registration_number', 'pan_number', 'address'], // Step 0
+      ['contact_name', 'contact_role', 'contact_email', 'contact_phone'], // Step 1
+      ['num_founders', 'team_size', 'sector', 'stage', 'business_model'], // Step 2
+      ['pitch', 'problem_statement', 'target_market', 'product_description'], // Step 3
+      ['terms_accepted'], // Step 4 (final submit, handled by form submit)
+    ];
+
+    const fieldsToValidate = stepFields[currentStep] || [];
+
+    const valid = await trigger(fieldsToValidate);
+
+    if (valid) {
+      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+    } else {
+      // Optionally scroll to first error or show message
+      console.log("Please fix validation errors before proceeding.");
+    }
+  };
+  
   // Form steps configuration
   const steps = [
     { 
@@ -88,7 +109,6 @@ export default function ProfileCreatePage() {
       if (data.logo?.[0]) {
         logo_url = await uploadFile(data.logo[0], 'logos', submissionUserId);
       }
-
       const payload = {
         user_id: submissionUserId,
         startup_name: data.startup_name,
@@ -106,9 +126,13 @@ export default function ProfileCreatePage() {
         team_size: Number(data.team_size || 0),
         sector: data.sector,
         pitch: data.pitch,
+        reg_certificate_url: data.reg_certificate_url || "unkown",
+        support_needed: data.support_needed || "unkown",
+        commitment: data.commitment || "unkown",
         problem_statement: data.problem_statement,
         target_market: data.target_market, // Add this line
         stage: data.stage,
+        funding_status: ["MVP", "Idea", "Prototype"].includes(data.stage) ? "Pre-Seed" :data.stage || "Pre-Seed",
         business_model: data.business_model,
         product_description: data.product_description,
         products: data.products ? JSON.parse(data.products) : [],
@@ -125,6 +149,7 @@ export default function ProfileCreatePage() {
         throw new Error(error.message);
       }
       
+      
       alert('Profile submitted successfully!');
       router.push('/directory');
     } catch (error: any) {
@@ -137,6 +162,9 @@ export default function ProfileCreatePage() {
   const nextStep = () => setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 0));
 
+
+
+ 
   if (loading) return (
     <div className="flex justify-center items-center min-h-[60vh]">
       <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -144,7 +172,7 @@ export default function ProfileCreatePage() {
   );
   
   return (
-    <div className="max-w-4xl mx-auto p-6 bg-white rounded-lg shadow-md">
+    <div className="max-w-5xl mx-auto p-6 bg-white rounded-lg shadow-md">
       {/* Progress bar */}
       <div className="mb-8">
         <div className="flex justify-between items-center mb-2">
@@ -161,14 +189,14 @@ export default function ProfileCreatePage() {
               >
                 {index < currentStep ? <Check size={18} /> : index + 1}
               </div>
-              <div className="absolute -bottom-6 w-max text-xs font-medium">
+              <div className="relative align-middle p-2 w-max text-xs font-medium">
                 {step.title}
               </div>
             </div>
           ))}
         </div>
         {/* Connecting lines */}
-        <div className="relative h-1 bg-gray-200 mt-5">
+        <div className="relative h-1 bg-gray-200 mt-2">
           <div 
             className="absolute top-0 left-0 h-full bg-blue-600 transition-all duration-300" 
             style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
@@ -177,7 +205,7 @@ export default function ProfileCreatePage() {
       </div>
 
       <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold">{steps[currentStep].title}</h1>
+        <h1 className="text-2xl text-gray-700 font-bold">{steps[currentStep].title}</h1>
         <p className="text-gray-600">{steps[currentStep].description}</p>
       </div>
       
@@ -214,7 +242,7 @@ export default function ProfileCreatePage() {
                 <input 
                   type="date" 
                   {...register('incorporation_date', { required: "Date is required" })} 
-                  className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
+                  className="w-full text-[#9CA3AF] px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500" 
                 />
                 {errors.incorporation_date && (
                   <p className="mt-1 text-sm text-red-600">{errors.incorporation_date.message?.toString()}</p>
@@ -225,7 +253,7 @@ export default function ProfileCreatePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Entity Type *</label>
                 <select 
                   {...register('entity_type', { required: "Entity type is required" })} 
-                  className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-[#9CA3AF] px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select entity type</option>
                   <option value="Private Limited">Private Limited</option>
@@ -301,7 +329,7 @@ export default function ProfileCreatePage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Contact Role *</label>
                 <select 
                   {...register('contact_role', { required: "Contact role is required" })} 
-                  className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full text-[#9CA3AF] px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Select role</option>
                   <option value="Founder">Founder</option>
@@ -400,7 +428,7 @@ export default function ProfileCreatePage() {
                 {...register('sector', { required: "Sector is required" })} 
                 className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Select sector</option>
+                <option className = "text-[#9CA3AF]" value="">Select sector</option>
                 <option value="Software">Software</option>
                 <option value="FinTech">FinTech</option>
                 <option value="HealthTech">HealthTech</option>
@@ -422,7 +450,7 @@ export default function ProfileCreatePage() {
                 {...register('stage', { required: "Stage is required" })} 
                 className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Select stage</option>
+                <option className = "text-[#9CA3AF]" value="">Select stage</option>
                 <option value="Idea">Idea</option>
                 <option value="Prototype">Prototype</option>
                 <option value="MVP">MVP</option>
@@ -442,7 +470,7 @@ export default function ProfileCreatePage() {
                 {...register('business_model', { required: "Business model is required" })} 
                 className="w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Select business model</option>
+                <option className = "text-[#9CA3AF]" value="">Select business model</option>
                 <option value="B2B">B2B</option>
                 <option value="B2C">B2C</option>
                 <option value="B2B2C">B2B2C</option>
@@ -618,7 +646,7 @@ export default function ProfileCreatePage() {
             {currentStep < steps.length - 1 ? (
               <button
                 type="button"
-                onClick={nextStep}
+                onClick={onNextStep}
                 className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 flex items-center"
               >
                 Next Step
